@@ -1,17 +1,17 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import JSONResponse
 import os
-from typing import List
 from pptx import Presentation
 from pptx.util import Inches
 from PIL import Image
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from typing import List
 
 app = FastAPI()
 
-# 📌 Directorio donde se guardarán temporalmente las imágenes en Render
-UPLOAD_FOLDER = "/tmp/uploads"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Crear la carpeta si no existe
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Asegurar que la carpeta existe
 
 # 📌 Función para crear PowerPoint
 def create_powerpoint(images, output_pptx):
@@ -50,23 +50,22 @@ def create_pdf(images, output_pdf):
 
     c.save()
 
-# 📌 Endpoint para subir imágenes y generar PowerPoint y PDF
+# 📌 Endpoint para recibir imágenes y generar archivos
 @app.post("/generate_ppt_pdf")
 async def generate_ppt_pdf(files: List[UploadFile] = File(...)):
     """
-    Recibe imágenes subidas por el usuario, las guarda temporalmente y genera un PowerPoint y un PDF con ellas.
+    Recibe archivos de imagen, los guarda en el servidor y genera un PowerPoint y un PDF.
     """
-    if not files:
-        return {"error": "No se han subido imágenes"}
-
     image_paths = []
 
-    # Guardar archivos en la carpeta temporal
     for file in files:
         file_path = os.path.join(UPLOAD_FOLDER, file.filename)
         with open(file_path, "wb") as buffer:
-            buffer.write(file.file.read())
+            buffer.write(await file.read())
         image_paths.append(file_path)
+
+    if not image_paths:
+        return JSONResponse(status_code=400, content={"error": "No se encontraron imágenes en la carpeta"})
 
     output_pptx = os.path.join(UPLOAD_FOLDER, "output_presentation.pptx")
     output_pdf = os.path.join(UPLOAD_FOLDER, "output_document.pdf")
@@ -74,9 +73,14 @@ async def generate_ppt_pdf(files: List[UploadFile] = File(...)):
     create_powerpoint(image_paths, output_pptx)
     create_pdf(image_paths, output_pdf)
 
-    return {"pptx_file": output_pptx, "pdf_file": output_pdf}
+    return JSONResponse(
+        content={
+            "pptx_file": output_pptx,
+            "pdf_file": output_pdf
+        },
+        status_code=200
+    )
 
-# 📌 Ruta de prueba para verificar si la API está funcionando
 @app.get("/")
-def home():
+async def home():
     return {"message": "API para generar PowerPoint y PDF con imágenes funcionando correctamente."}

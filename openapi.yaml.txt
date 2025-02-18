@@ -1,0 +1,57 @@
+openapi: 3.1.0
+info:
+  title: Generador de PowerPoint y PDF con imágenes
+  description: API para subir imágenes, generar un archivo PowerPoint y un PDF automáticamente.
+  version: 1.0.0
+servers:
+  - url: https://api-ppt-pdf.onrender.com
+paths:
+  /upload_images:
+    post:
+      summary: Subir imágenes al servidor
+      operationId: upload_images
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "200":
+          description: Imágenes subidas correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  files:
+                    type: array
+                    items:
+                      type: string
+
+  /generate_ppt_pdf:
+    post:
+      summary: Generar PowerPoint y PDF desde las imágenes subidas
+      operationId: generate_ppt_pdf
+      responses:
+        "200":
+          description: Archivos generados con éxito
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pptx_file:
+                    type: string
+                    description: URL del archivo PowerPoint generado
+                  pdf_file:
+                    type: string
+                    description: URL del archivo PDF generado
